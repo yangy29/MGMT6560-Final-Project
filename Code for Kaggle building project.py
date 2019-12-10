@@ -85,6 +85,9 @@ def data_prep(data):
     return data
 #---------------------------------------------------------
 train = data_prep(train)
+del train['primary_use']
+
+train = train.fillna(0)
 
 X_train = train.drop(['meter_reading'], axis=1)
 y_train = np.log1p(train['meter_reading'])
@@ -95,18 +98,44 @@ train_X, test_X, train_y,test_y = train_test_split(X_train, y_train,test_size=0.
 #X_test = test.drop(['row_id'], axis = 1)
 #test_id = test[['row_id']]
 
-back_train = train
-#back_test = test
-del train
-
 gc.collect()
 
 
 
 ## Model setting up ---------------------------------
+from sklearn.metrics import mean_squared_log_error
+
+from sklearn.ensemble import RandomForestRegressor 
+  
+ # create regressor object 
+regressor = RandomForestRegressor(n_estimators = 10, random_state = 42) 
+  
+# fit the regressor with x and y data 
+rg = regressor.fit(train_X, train_y) 
+
+# Use the forest's predict method on the test data
+predictions = rg.predict(test_X)
+rmsle_randomforest = np.sqrt(mean_squared_log_error(test_y,predictions))
+
+
+
+##-----Decision tree-----------
+# Create Decision Tree classifer object
+from sklearn import linear_model
+
+reg = linear_model.LinearRegression()
+
+reg.fit(train_X,train_y)
+
+pred = reg.predict(test_X)
+
+rmsle_decisiontree = np.sqrt(mean_squared_log_error(test_y,pred))
+
+
+##----LightGBM----------------------
 
 import lightgbm as lgb
-from sklearn.metrics import mean_squared_log_error
+
 
 
 
@@ -135,8 +164,13 @@ pred_y = model.predict(test_X)
 #---------Check
 
 #rmsle1 = np.sqrt(mean_squared_log_error(y_train,y_pred))
-rmsle2 = np.sqrt(mean_squared_log_error(test_y,pred_y))
+rmsle_lightGBM = np.sqrt(mean_squared_log_error(test_y,pred_y))
 
+
+
+print("Accuracy for Linear Regresion:",rmsle_decisiontree)
+print("Accuracy for Random Forest:",rmsle_randomforest)
+print("Accuracy for LightGBM:",rmsle_lightGBM)
 
 #-----------plot----------
 import seaborn as sns
